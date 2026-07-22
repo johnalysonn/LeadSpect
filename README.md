@@ -1,58 +1,201 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<h1 align="center">
+  <br>
+  🎯 <b>LeadSpect</b>
+  <br>
+</h1>
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <b>Plataforma Inteligente de Prospecção Geográfica, Enriquecimento e Gestão de Leads B2B</b>
 </p>
 
-## About Laravel
+<p align="center">
+  <a href="https://php.net"><img src="https://img.shields.io/badge/PHP-8.3%2B-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.3"></a>
+  <a href="https://laravel.com"><img src="https://img.shields.io/badge/Laravel-13.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13"></a>
+  <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind_CSS-v4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS v4"></a>
+  <a href="https://vitejs.dev"><img src="https://img.shields.io/badge/Vite-6.x-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite"></a>
+  <a href="https://pestphp.com"><img src="https://img.shields.io/badge/Pest_PHP-v4.x-00B4D8?style=for-the-badge&logo=pest&logoColor=white" alt="Pest PHP"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License MIT"></a>
+</p>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 📌 Sobre o Projeto
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+O **LeadSpect** é uma solução completa desenvolvida para automatizar a descoberta, enriquecimento e qualificação de clientes B2B com base em geolocalização. 
 
-## Learning Laravel
+Permite mapear estabelecimentos e empresas em tempo real utilizando integração com APIs de mapas e geocodificação, realizar scraping automático no website dos leads para capturar contatos (WhatsApp, E-mail, Instagram, Facebook, LinkedIn) e gerenciar a jornada comercial através de um funil de vendas (Kanban).
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## ✨ Funcionalidades Principais
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+- 🗺️ **Prospecção Geográfica de Leads**: Pesquisa por nichos e cidades utilizando **TomTom Search API** com mecanismo de fallback resiliente via **OpenStreetMap (Overpass API / Nominatim)**.
+- 🔍 **Enriquecimento Inteligente de Dados**: Scraping automático em background que vasculha o site do lead para extrair número de WhatsApp, telefone, e-mail e perfis em redes sociais.
+- 📊 **Pipeline Kanban de Leads**: Organização da jornada comercial por status (*Novo, Contatado, Em Negociação, Fechado, Perdido*).
+- 💬 **Integração Rápida com WhatsApp**: Envio direto de mensagens via WhatsApp Web utilizando templates de mensagem personalizados com variáveis dinâmicas (`{nome}`, `{empresa}`, etc.).
+- 🏷️ **Etiquetas e Anotações**: Organização por tags personalizadas e registro de histórico de interações/anotações por lead.
+- 🔑 **Autenticação Flexível (Social Login)**: Login tradicional por e-mail e senha + login rápido via **GitHub** e **Google OAuth** (Laravel Socialite).
+- 📥 **Exportação de Dados**: Exportação rápida dos leads prospectados em formatos CSV, JSON e Excel.
 
-## Agentic Development
+---
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## 🛠️ Tecnologias Utilizadas
 
+### **Backend & Framework**
+- **PHP 8.3+**
+- **Laravel 13**
+- **Laravel Socialite** (OAuth para Google e GitHub)
+- **SQLite** (Padrão para ambiente de desenvolvimento)
+
+### **Frontend & Estilização**
+- **Blade Templates**
+- **Tailwind CSS v4** (Com utilitários modernos e design fluido)
+- **Vite** (Bundler e Live Reload)
+- **Concurrently** (Execução paralela do PHP Serve + Queue Worker + Vite)
+
+### **Serviços de Geociência & Prospecção**
+- **TomTom Search & Places API**
+- **OpenStreetMap / Overpass API / Nominatim**
+
+### **Testes & Qualidade de Código**
+- **Pest PHP 4** (Testes de unidade, funcionalidade e arquitetura)
+- **Laravel Pint** (Linter e formatador de código PHP)
+
+---
+
+## 🔑 Configuração das Chaves de API (`.env`)
+
+Para o funcionamento completo da aplicação (como prospecção via TomTom e Social Login), configure as seguintes variáveis no seu arquivo `.env`:
+
+### 1. **TomTom API (Geolocalização & Prospecção de Locais)**
+- **Como obter**: Cadastre-se gratuitamente no [Portal do Desenvolvedor TomTom](https://developer.tomtom.com/) e crie uma **API Key**.
+- **Variáveis**:
+  ```env
+  TOMTOM_API_KEY=sua_chave_tomtom_aqui
+  ```
+  *(Nota: Se a chave TomTom não for informada ou atingir o limite, o sistema aciona automaticamente o provedor de fallback gratuito OpenStreetMap/Overpass API).*
+
+---
+
+### 2. **Google OAuth (Login com Google)**
+- **Como obter**: Acesse o [Google Cloud Console](https://console.cloud.google.com/), crie um projeto, configure a *Tela de Consentimento OAuth* e crie credenciais do tipo **ID do cliente OAuth 2.0 (Web Application)**.
+- **URI de Redirecionamento autorizada**: `http://localhost:8000/auth/google/callback` (ou a URL do seu ambiente).
+- **Variáveis**:
+  ```env
+  GOOGLE_CLIENT_ID=seu_client_id_google.apps.googleusercontent.com
+  GOOGLE_CLIENT_SECRET=seu_client_secret_google
+  GOOGLE_REDIRECT_URI="${APP_URL}/auth/google/callback"
+  ```
+
+---
+
+### 3. **GitHub OAuth (Login com GitHub)**
+- **Como obter**: Acesse [GitHub Developer Settings -> OAuth Apps](https://github.com/settings/developers), crie um novo OAuth App.
+- **Authorization callback URL**: `http://localhost:8000/auth/github/callback`
+- **Variáveis**:
+  ```env
+  GITHUB_CLIENT_ID=seu_github_client_id
+  GITHUB_CLIENT_SECRET=seu_github_client_secret
+  GITHUB_REDIRECT_URI="${APP_URL}/auth/github/callback"
+  ```
+
+---
+
+## 📦 Passo a Passo de Instalação e Execução
+
+### **Prerequisites**
+- PHP `>= 8.3` (com extensões `sqlite3`, `curl`, `mbstring`, `pdo_sqlite` ativas)
+- Composer `>= 2.x`
+- Node.js `>= 18.x` e NPM
+
+---
+
+### 1️⃣ **Clonar o Repositório**
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone https://github.com/johnalysonn/LeadSpect.git
+cd LeadSpect
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 2️⃣ **Instalar Dependências do PHP**
+```bash
+composer install
+```
 
-## Contributing
+### 3️⃣ **Instalar Dependências do Frontend**
+```bash
+npm install
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 4️⃣ **Configurar o Arquivo de Ambiente (`.env`)**
+Copie o arquivo de exemplo `.env.example` para `.env`:
+```bash
+cp .env.example .env
+```
+Abra o `.env` e preencha com as suas API Keys (TomTom, Google, GitHub, etc.) conforme explicado na seção anterior.
 
-## Code of Conduct
+### 5️⃣ **Gerar a Chave de Criptografia da Aplicação**
+```bash
+php artisan key:generate
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 6️⃣ **Criar o Banco de Dados e Rodar as Migrações**
+Caso utilize SQLite, crie o arquivo do banco (se não for criado automaticamente):
+```bash
+touch database/database.sqlite
+php artisan migrate --seed
+```
 
-## Security Vulnerabilities
+### 7️⃣ **Iniciar o Ambiente de Desenvolvimento**
+O projeto conta com um script rápido via Composer que executa simultaneamente o **Servidor Web PHP**, o **Queue Worker** e o **Vite**:
+```bash
+composer dev
+```
+Após executar o comando acima, acesse no seu navegador:
+👉 **[http://localhost:8000](http://localhost:8000)**
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+## 🧪 Testes e Qualidade de Código
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### **Executar Suíte de Testes (Pest PHP)**
+```bash
+composer test
+# ou
+php artisan test
+```
+
+### **Verificar & Formatar Estilo de Código (Laravel Pint)**
+```bash
+./vendor/bin/pint
+```
+
+---
+
+## 📂 Estrutura Principal do Projeto
+
+```text
+LeadSpect/
+├── app/
+│   ├── Http/Controllers/       # Controladores da aplicação (Auth, Leads, Busca, Templates)
+│   ├── Models/                 # Modelos Eloquent (Lead, Tag, SearchHistory, User, etc.)
+│   └── Services/
+│       ├── Enrichment/         # Serviço de raspagem web e enriquecimento de dados de contato
+│       └── Location/           # Provedores de busca (TomTom API, Overpass/OSM Fallback)
+├── database/
+│   ├── migrations/             # Estrutura das tabelas do banco de dados
+│   └── seeders/                # População inicial de dados
+├── resources/
+│   ├── css/                    # Estilos Tailwind CSS
+│   └── views/                  # Templates Blade da interface do usuário
+├── routes/
+│   └── web.php                 # Definição das rotas da aplicação
+├── tests/                      # Suíte de testes com Pest PHP
+├── .env.example                # Exemplo das variáveis de ambiente
+└── composer.json               # Configurações do PHP e scripts de dev/teste
+```
+
+---
+
+## 📄 Licença
+
+Este projeto está sob a licença [MIT](LICENSE). Desenvolvido para facilitar e acelerar a prospecção B2B de forma eficiente.
