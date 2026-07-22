@@ -18,7 +18,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: mbstring, bcmath, pdo, pdo_pgsql
+          extensions: mbstring, bcmath, pdo, pdo_sqlite
           coverage: none
 
       - name: Install Composer dependencies
@@ -36,7 +36,15 @@ jobs:
       - name: Build frontend
         run: RAYON_NUM_THREADS=1 npm run build
 
+      - name: Prepare Environment for Testing
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
       - name: Run Laravel tests
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
         run: php artisan test
 
   deploy:
@@ -45,16 +53,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
-
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-
 
       - name: Install production dependencies
         run: |
@@ -64,18 +69,22 @@ jobs:
           --prefer-dist \
           --optimize-autoloader
 
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-
       - name: Build assets
         run: |
           npm ci
-          npm run build
+          RAYON_NUM_THREADS=1 npm run build
 
+      - name: Limpar arquivos de desenvolvimento antes do envio
+        run: |
+          rm -rf node_modules
+          rm -rf tests
+          rm -rf .git
+          rm -rf .github
 
       - name: Deploy via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.5
@@ -86,4 +95,3 @@ jobs:
           server_port: 22
           local_path: './'
           remote_path: ${{ secrets.HOSTINGER_PATH }}
-
