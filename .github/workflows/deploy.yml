@@ -34,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Build frontend
-        run: RAYON_NUM_THREADS=1 npm run build
+        run: npm run build
 
       - name: Prepare Environment for Testing
         run: |
@@ -77,7 +77,7 @@ jobs:
       - name: Build assets
         run: |
           npm ci
-          RAYON_NUM_THREADS=1 npm run build
+          npm run build
 
       - name: Limpar arquivos de desenvolvimento antes do envio
         run: |
@@ -85,6 +85,8 @@ jobs:
           rm -rf tests
           rm -rf .git
           rm -rf .github
+          rm -rf bootstrap/cache/*.php
+          rm -rf storage/*.key
 
       - name: Deploy via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.5
