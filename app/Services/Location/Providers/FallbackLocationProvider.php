@@ -4,8 +4,9 @@ namespace App\Services\Location\Providers;
 
 use App\Models\CompanySearchCache;
 use App\Services\Location\Contracts\LocationProviderInterface;
-use App\Services\Location\DTOs\CompanyResultDTO;
+use App\Services\Location\DTOs\PlaceDTO;
 use App\Services\Location\DTOs\SearchLocationDTO;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class FallbackLocationProvider implements LocationProviderInterface
@@ -81,9 +82,9 @@ class FallbackLocationProvider implements LocationProviderInterface
     /**
      * Search companies around a geographic coordinate with Cache -> TomTom -> Overpass strategy.
      *
-     * @return array<CompanyResultDTO>
+     * @return Collection<int, PlaceDTO>
      */
-    public function searchCompanies(SearchLocationDTO $searchDTO): array
+    public function searchCompanies(SearchLocationDTO $searchDTO): Collection
     {
         $hash = $searchDTO->cacheHash();
 
@@ -91,38 +92,20 @@ class FallbackLocationProvider implements LocationProviderInterface
         $cached = CompanySearchCache::where('search_hash', $hash)->first();
 
         if ($cached && $cached->consulted_at->gt(now()->subDays(7))) {
-            $companyDTOs = array_map(
-                fn($item) => new CompanyResultDTO(
-                    osmId: $item['osm_id'] ?? null,
-                    name: $item['name'] ?? 'Empresa',
-                    category: $item['category'] ?? 'Estabelecimento',
-                    address: $item['address'] ?? null,
-                    city: $item['city'] ?? null,
-                    neighborhood: $item['neighborhood'] ?? null,
-                    postalCode: $item['postal_code'] ?? null,
-                    latitude: (float) $item['latitude'],
-                    longitude: (float) $item['longitude'],
-                    phone: $item['phone'] ?? null,
-                    whatsapp: $item['whatsapp'] ?? null,
-                    website: $item['website'] ?? null,
-                    instagram: $item['instagram'] ?? null,
-                    facebook: $item['facebook'] ?? null,
-                    rating: isset($item['rating']) ? (float) $item['rating'] : null,
-                    reviewCount: (int) ($item['review_count'] ?? 0),
-                    isOpenNow: $item['is_open_now'] ?? null,
-                    openingHours: $item['opening_hours'] ?? null,
-                    rawData: $item['raw_data'] ?? []
-                ),
+            $places = array_map(
+                fn($item) => PlaceDTO::fromArray($item),
                 $cached->response_data
             );
+
+            $collection = collect($places);
 
             Log::info('Busca de empresas retornada do cache', [
                 'provider' => 'Cache',
                 'execution_time_ms' => 0.0,
-                'results_count' => count($companyDTOs),
+                'results_count' => $collection->count(),
             ]);
 
-            return $companyDTOs;
+            return $collection;
         }
 
         // 2. Tentar Provider Principal (TomTom)
@@ -131,17 +114,18 @@ class FallbackLocationProvider implements LocationProviderInterface
 
         try {
             $results = $this->primaryProvider->searchCompanies($searchDTO);
+            $collection = $results instanceof Collection ? $results : collect($results);
             $durationMs = round((microtime(true) - $startTime) * 1000, 2);
 
             Log::info('Busca de empresas realizada com sucesso', [
                 'provider' => 'TomTom',
                 'execution_time_ms' => $durationMs,
-                'results_count' => count($results),
+                'results_count' => $collection->count(),
             ]);
 
-            $this->saveToCache($hash, $searchDTO, $results);
+            $this->saveToCache($hash, $searchDTO, $collection);
 
-            return $results;
+            return $collection;
         } catch (\Throwable $e) {
             $fallbackReason = $e->getMessage();
 
@@ -153,6 +137,7 @@ class FallbackLocationProvider implements LocationProviderInterface
         // 3. Fallback para Provider Secundário (Overpass)
         $overpassStartTime = microtime(true);
         $results = $this->fallbackProvider->searchCompanies($searchDTO);
+        $collection = $results instanceof Collection ? $results : collect($results);
         $durationMs = round((microtime(true) - $overpassStartTime) * 1000, 2);
 
         $endpointUsed = method_exists($this->fallbackProvider, 'getLastUsedEndpoint')
@@ -162,24 +147,24 @@ class FallbackLocationProvider implements LocationProviderInterface
         Log::info('Busca de empresas realizada com sucesso', [
             'provider' => 'Overpass',
             'execution_time_ms' => $durationMs,
-            'results_count' => count($results),
+            'results_count' => $collection->count(),
             'fallback_reason' => $fallbackReason,
             'overpass_endpoint' => $endpointUsed,
         ]);
 
-        $this->saveToCache($hash, $searchDTO, $results);
+        $this->saveToCache($hash, $searchDTO, $collection);
 
-        return $results;
+        return $collection;
     }
 
     /**
      * Salva ou atualiza os resultados da busca no cache de banco de dados.
      *
-     * @param array<CompanyResultDTO> $results
+     * @param Collection<int, PlaceDTO> $results
      */
-    protected function saveToCache(string $hash, SearchLocationDTO $searchDTO, array $results): void
+    protected function saveToCache(string $hash, SearchLocationDTO $searchDTO, Collection $results): void
     {
-        $serializedResults = array_map(fn(CompanyResultDTO $dto) => $dto->toArray(), $results);
+        $serializedResults = $results->map(fn(PlaceDTO $dto) => $dto->toArray())->values()->all();
 
         CompanySearchCache::updateOrCreate(
             ['search_hash' => $hash],

@@ -5,13 +5,19 @@ namespace App\Actions\Search;
 use App\Models\SearchHistory;
 use App\Models\User;
 use App\Services\Location\Contracts\LocationProviderInterface;
+use App\Services\Location\DTOs\PlaceDTO;
 use App\Services\Location\DTOs\SearchLocationDTO;
+use App\Services\Location\LeadSearchService;
+use Illuminate\Support\Collection;
 
 class ExecuteCompanySearchAction
 {
     public function __construct(
-        protected LocationProviderInterface $locationProvider
-    ) {}
+        protected LocationProviderInterface $locationProvider,
+        protected ?LeadSearchService $leadSearchService = null
+    ) {
+        $this->leadSearchService = $leadSearchService ?? new LeadSearchService($locationProvider);
+    }
 
     public function execute(User $user, array $params): array
     {
@@ -64,13 +70,14 @@ class ExecuteCompanySearchAction
             searchType: $searchType
         );
 
-        $companiesDTOs = $this->locationProvider->searchCompanies($searchDTO);
+        /** @var Collection<int, PlaceDTO> $placesCollection */
+        $placesCollection = $this->leadSearchService->search($searchDTO);
 
         // Se a cidade ainda for desconhecida, tentar extrair dos resultados retornados
-        if ($city === null && !empty($companiesDTOs)) {
-            foreach ($companiesDTOs as $dto) {
-                if (!empty($dto->city)) {
-                    $city = $dto->city;
+        if ($city === null && $placesCollection->isNotEmpty()) {
+            foreach ($placesCollection as $place) {
+                if (!empty($place->city)) {
+                    $city = $place->city;
                     break;
                 }
             }
@@ -85,7 +92,7 @@ class ExecuteCompanySearchAction
             'longitude' => $lng,
             'radius' => $radius,
             'category' => $category,
-            'results_count' => count($companiesDTOs),
+            'results_count' => $placesCollection->count(),
         ]);
 
         return [
@@ -98,8 +105,8 @@ class ExecuteCompanySearchAction
             'city_geojson' => $cityBoundary,
             'radius' => $radius,
             'category' => $category,
-            'total' => count($companiesDTOs),
-            'companies' => array_map(fn($dto) => $dto->toArray(), $companiesDTOs),
+            'total' => $placesCollection->count(),
+            'companies' => $placesCollection->map(fn(PlaceDTO $place) => $place->toArray())->values()->all(),
         ];
     }
 }

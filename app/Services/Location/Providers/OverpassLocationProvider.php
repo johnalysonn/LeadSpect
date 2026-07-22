@@ -4,8 +4,11 @@ namespace App\Services\Location\Providers;
 
 use App\Models\CompanySearchCache;
 use App\Services\Location\Contracts\LocationProviderInterface;
-use App\Services\Location\DTOs\CompanyResultDTO;
+use App\Services\Location\DTOs\PlaceDTO;
 use App\Services\Location\DTOs\SearchLocationDTO;
+use App\Services\Location\Mappers\CategoryMapper;
+use App\Services\Location\Mappers\OverpassResponseMapper;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -75,11 +78,12 @@ class OverpassLocationProvider implements LocationProviderInterface
         return null;
     }
 
-
     /**
      * Search companies around a geographic coordinate using Overpass API with local cache.
+     *
+     * @return Collection<int, PlaceDTO>
      */
-    public function searchCompanies(SearchLocationDTO $searchDTO): array
+    public function searchCompanies(SearchLocationDTO $searchDTO): Collection
     {
         $hash = $searchDTO->cacheHash();
 
@@ -87,30 +91,11 @@ class OverpassLocationProvider implements LocationProviderInterface
         $cached = CompanySearchCache::where('search_hash', $hash)->first();
 
         if ($cached && $cached->consulted_at->gt(now()->subDays(7))) {
-            return array_map(
-                fn($item) => new CompanyResultDTO(
-                    osmId: $item['osm_id'] ?? null,
-                    name: $item['name'] ?? 'Empresa',
-                    category: $item['category'] ?? 'Estabelecimento',
-                    address: $item['address'] ?? null,
-                    city: $item['city'] ?? null,
-                    neighborhood: $item['neighborhood'] ?? null,
-                    postalCode: $item['postal_code'] ?? null,
-                    latitude: (float) $item['latitude'],
-                    longitude: (float) $item['longitude'],
-                    phone: $item['phone'] ?? null,
-                    whatsapp: $item['whatsapp'] ?? null,
-                    website: $item['website'] ?? null,
-                    instagram: $item['instagram'] ?? null,
-                    facebook: $item['facebook'] ?? null,
-                    rating: isset($item['rating']) ? (float) $item['rating'] : null,
-                    reviewCount: (int) ($item['review_count'] ?? 0),
-                    isOpenNow: $item['is_open_now'] ?? null,
-                    openingHours: $item['opening_hours'] ?? null,
-                    rawData: $item['raw_data'] ?? []
-                ),
+            $cachedPlaces = array_map(
+                fn($item) => PlaceDTO::fromArray($item),
                 $cached->response_data
             );
+            return collect($cachedPlaces);
         }
 
         // 2. Montar Consulta Overpass QL com Mapeamento de Categoria
@@ -150,21 +135,17 @@ class OverpassLocationProvider implements LocationProviderInterface
                 'barbearia' => ['tags' => ['"shop"="hairdresser"'], 'keywords' => ['barbearia', 'barbeiro', 'salao', 'hair']],
             ];
 
-            // Construir união de sub-queries otimizadas usando nwr (node, way, relation)
             $subqueries = [];
 
             if (isset($rules[$normalized])) {
                 $rule = $rules[$normalized];
-                // Adiciona tags específicas
                 foreach ($rule['tags'] as $tag) {
                     $subqueries[] = "nwr(around:{$radius},{$lat},{$lng})[{$tag}];";
                 }
-                // Adiciona palavras-chave no nome com suporte insensível a acentos
                 $regexPatterns = array_map(fn($kw) => $this->toAccentInsensitiveRegex($kw), $rule['keywords']);
                 $keywordsRegex = implode('|', $regexPatterns);
                 $subqueries[] = "nwr(around:{$radius},{$lat},{$lng})[\"name\"~\"{$keywordsRegex}\",i];";
             } else {
-                // Se for categoria desconhecida, busca nas principais tags e no nome com suporte a acentos
                 $catRegex = $this->toAccentInsensitiveRegex($category);
                 $keys = ['amenity', 'shop', 'office', 'craft', 'leisure', 'tourism', 'healthcare', 'name'];
                 foreach ($keys as $key) {
@@ -175,20 +156,18 @@ class OverpassLocationProvider implements LocationProviderInterface
             $union = implode("\n", $subqueries);
             $overpassQuery = "[out:json][timeout:15];(\n{$union}\n);out center body;";
         } else {
-            // Se nenhuma categoria informada, busca qualquer estabelecimento com nome
             $overpassQuery = "[out:json][timeout:15];(nwr(around:{$radius},{$lat},{$lng})[\"name\"];);out center body;";
         }
 
         $results = $this->queryOverpassApi($overpassQuery, $searchDTO);
 
-        // Se queryOverpassApi falhou (retornou null devido a timeout/conexão), gera mock resiliente
         if ($results === null) {
             $this->lastUsedEndpoint = 'resilient_mock';
-            $results = $this->generateResilientResults($searchDTO);
+            $results = collect($this->generateResilientResults($searchDTO));
         }
 
         // 3. Gravar ou Atualizar Cache no Banco de Dados
-        $serializedResults = array_map(fn(CompanyResultDTO $dto) => $dto->toArray(), $results);
+        $serializedResults = $results->map(fn(PlaceDTO $dto) => $dto->toArray())->values()->all();
 
         CompanySearchCache::updateOrCreate(
             ['search_hash' => $hash],
@@ -207,8 +186,10 @@ class OverpassLocationProvider implements LocationProviderInterface
 
     /**
      * Executa a requisição HTTP à Overpass API com rotação de endpoints para resiliência.
+     *
+     * @return Collection<int, PlaceDTO>|null
      */
-    protected function queryOverpassApi(string $overpassQuery, SearchLocationDTO $searchDTO): ?array
+    protected function queryOverpassApi(string $overpassQuery, SearchLocationDTO $searchDTO): ?Collection
     {
         $endpoints = [
             'https://overpass-api.de/api/interpreter',
@@ -233,56 +214,12 @@ class OverpassLocationProvider implements LocationProviderInterface
                     $results = [];
 
                     foreach ($elements as $element) {
-                        $tags = $element['tags'] ?? [];
-                        if (empty($tags['name'])) {
-                            continue;
+                        $placeDTO = OverpassResponseMapper::map($element, $searchDTO->category);
+                        if ($placeDTO !== null) {
+                            $results[] = $placeDTO;
                         }
-
-                        $elemLat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                        $elemLng = $element['lon'] ?? ($element['center']['lon'] ?? null);
-
-                        if ($elemLat === null || $elemLng === null) {
-                            continue;
-                        }
-
-                        $phone = $tags['phone'] ?? $tags['contact:phone'] ?? null;
-                        $whatsapp = $tags['whatsapp'] ?? $tags['contact:whatsapp'] ?? null;
-                        $website = $tags['website'] ?? $tags['contact:website'] ?? $tags['url'] ?? null;
-
-                        if (!$whatsapp && $phone && preg_match('/(?:9\d{8}|\+55.*9\d{8})/', $phone)) {
-                            $whatsapp = $phone;
-                        }
-
-                        $category = $tags['amenity'] ?? $tags['shop'] ?? $tags['office'] ?? $tags['craft'] ?? $searchDTO->category ?? 'Estabelecimento';
-                        $street = $tags['addr:street'] ?? null;
-                        $housenumber = $tags['addr:housenumber'] ?? null;
-                        $address = $street ? ($housenumber ? "{$street}, {$housenumber}" : $street) : null;
-
-                        $dto = new CompanyResultDTO(
-                            osmId: (string) ($element['id'] ?? null),
-                            name: $tags['name'],
-                            category: ucfirst(str_replace('_', ' ', $category)),
-                            address: $address,
-                            city: $tags['addr:city'] ?? null,
-                            neighborhood: $tags['addr:suburb'] ?? $tags['addr:neighbourhood'] ?? null,
-                            postalCode: $tags['addr:postcode'] ?? null,
-                            latitude: (float) $elemLat,
-                            longitude: (float) $elemLng,
-                            phone: $phone,
-                            whatsapp: $whatsapp,
-                            website: $website,
-                            instagram: $tags['contact:instagram'] ?? null,
-                            facebook: $tags['contact:facebook'] ?? null,
-                            rating: null,
-                            reviewCount: 0,
-                            isOpenNow: null,
-                            openingHours: $tags['opening_hours'] ?? null,
-                            rawData: $tags
-                        );
-
-                        $results[] = $dto;
                     }
-                    return $results;
+                    return collect($results);
                 }
             } catch (\Throwable $e) {
                 Log::warning("Erro ao consultar Overpass API no endpoint {$endpoint}: " . $e->getMessage());
@@ -393,31 +330,32 @@ class OverpassLocationProvider implements LocationProviderInterface
 
     /**
      * Gera resultados locais simulados com base nas coordenadas para garantir resiliência da busca.
-     * Os resultados agora escalam de acordo com o raio e mantêm consistência geométrica.
+     *
+     * @return array<int, PlaceDTO>
      */
     protected function generateResilientResults(SearchLocationDTO $searchDTO): array
     {
-        $cat = !empty($searchDTO->category) ? ucfirst($searchDTO->category) : 'Comércio';
+        $cat = !empty($searchDTO->category) ? $searchDTO->category : 'Comércio';
+        $normalizedCat = CategoryMapper::normalize($cat);
         $lat = $searchDTO->latitude;
         $lng = $searchDTO->longitude;
         $radius = $searchDTO->radius;
 
         $baseTypes = [
-            ['name' => "{$cat} Central", 'phone' => '11998877665', 'website' => 'https://empresacentral.com.br', 'insta' => '@central_oficial'],
-            ['name' => "{$cat} Express", 'phone' => '11987654321', 'website' => null, 'insta' => '@express_local'],
-            ['name' => "Grupo {$cat} Prime", 'phone' => '11976543210', 'website' => 'https://grupoprime.com.br', 'insta' => '@grupoprime'],
-            ['name' => "{$cat} & Cia", 'phone' => '11965432109', 'website' => null, 'insta' => null],
-            ['name' => "Studio {$cat}", 'phone' => '11954321098', 'website' => 'https://studiolocal.com.br', 'insta' => '@studiolocal'],
-            ['name' => "Super {$cat}", 'phone' => '11943210987', 'website' => 'https://superlocal.com.br', 'insta' => '@super_local'],
-            ['name' => "{$cat} Aliança", 'phone' => '11932109876', 'website' => null, 'insta' => null],
-            ['name' => "{$cat} Preço Baixo", 'phone' => '11921098765', 'website' => null, 'insta' => '@precobaixo'],
-            ['name' => "Nova {$cat}", 'phone' => '11910987654', 'website' => 'https://novalocal.com.br', 'insta' => '@nova_farma'],
-            ['name' => "{$cat} Popular", 'phone' => '11909876543', 'website' => null, 'insta' => null],
-            ['name' => "Mais {$cat}", 'phone' => '11998765432', 'website' => 'https://maisfarma.com.br', 'insta' => '@maisfarma'],
-            ['name' => "Nossa {$cat}", 'phone' => '11987654321', 'website' => null, 'insta' => null],
+            ['name' => ucfirst($cat) . " Central", 'phone' => '11998877665', 'website' => 'https://empresacentral.com.br', 'insta' => '@central_oficial'],
+            ['name' => ucfirst($cat) . " Express", 'phone' => '11987654321', 'website' => null, 'insta' => '@express_local'],
+            ['name' => "Grupo " . ucfirst($cat) . " Prime", 'phone' => '11976543210', 'website' => 'https://grupoprime.com.br', 'insta' => '@grupoprime'],
+            ['name' => ucfirst($cat) . " & Cia", 'phone' => '11965432109', 'website' => null, 'insta' => null],
+            ['name' => "Studio " . ucfirst($cat), 'phone' => '11954321098', 'website' => 'https://studiolocal.com.br', 'insta' => '@studiolocal'],
+            ['name' => "Super " . ucfirst($cat), 'phone' => '11943210987', 'website' => 'https://superlocal.com.br', 'insta' => '@super_local'],
+            ['name' => ucfirst($cat) . " Aliança", 'phone' => '11932109876', 'website' => null, 'insta' => null],
+            ['name' => ucfirst($cat) . " Preço Baixo", 'phone' => '11921098765', 'website' => null, 'insta' => '@precobaixo'],
+            ['name' => "Nova " . ucfirst($cat), 'phone' => '11910987654', 'website' => 'https://novalocal.com.br', 'insta' => '@nova_farma'],
+            ['name' => ucfirst($cat) . " Popular", 'phone' => '11909876543', 'website' => null, 'insta' => null],
+            ['name' => "Mais " . ucfirst($cat), 'phone' => '11998765432', 'website' => 'https://maisfarma.com.br', 'insta' => '@maisfarma'],
+            ['name' => "Nossa " . ucfirst($cat), 'phone' => '11987654321', 'website' => null, 'insta' => null],
         ];
 
-        // Determinar quantidade com base no raio
         if ($radius <= 500) {
             $count = 3;
         } elseif ($radius <= 1000) {
@@ -432,30 +370,31 @@ class OverpassLocationProvider implements LocationProviderInterface
 
         $latRounded = round($lat, 4);
         $lngRounded = round($lng, 4);
-        $normalizedCategory = strtolower(trim($searchDTO->category ?? 'all'));
 
         $results = [];
         foreach ($types as $idx => $t) {
             $offsetLat = (sin($idx + 1) * 0.001 * ($idx + 1));
             $offsetLng = (cos($idx + 1) * 0.001 * ($idx + 1));
 
-            $results[] = new CompanyResultDTO(
-                osmId: "resilient_" . md5("v2|{$latRounded}|{$lngRounded}|{$normalizedCategory}|{$idx}"),
+            $results[] = new PlaceDTO(
+                id: "resilient_" . md5("v2|{$latRounded}|{$lngRounded}|{$normalizedCat}|{$idx}"),
                 name: $t['name'],
-                category: $cat,
-                address: "Avenida Principal, " . (($idx + 1) * 100),
-                city: "São Paulo",
-                neighborhood: "Centro",
-                postalCode: "01000-000",
+                category: $normalizedCat,
                 latitude: $lat + $offsetLat,
                 longitude: $lng + $offsetLng,
+                address: "Avenida Principal, " . (($idx + 1) * 100),
+                city: "São Paulo",
+                state: "SP",
+                country: "Brasil",
                 phone: $t['phone'],
-                whatsapp: $t['phone'],
                 website: $t['website'],
-                instagram: $t['insta'],
-                facebook: $t['website'] ? "https://facebook.com/" . slugify($t['name']) : null,
+                openingHours: null,
                 rating: 4.8 - ($idx * 0.1),
-                reviewCount: 15 + ($idx * 5)
+                reviewsCount: 15 + ($idx * 5),
+                provider: 'Overpass',
+                whatsapp: $t['phone'],
+                instagram: $t['insta'],
+                facebook: $t['website'] ? "https://facebook.com/" . slugify($t['name']) : null
             );
         }
 

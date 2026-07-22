@@ -2,8 +2,9 @@
 
 namespace App\Services\Location\Contracts;
 
-use App\Services\Location\DTOs\CompanyResultDTO;
+use App\Services\Location\DTOs\PlaceDTO;
 use App\Services\Location\DTOs\SearchLocationDTO;
+use Illuminate\Support\Collection;
 
 interface LocationProviderInterface
 {
@@ -17,7 +18,7 @@ interface LocationProviderInterface
     /**
      * Search companies around a geographic coordinate within a given radius.
      *
-     * @return array<CompanyResultDTO>
+     * @return Collection<int, PlaceDTO>|array<int, PlaceDTO>
      */
-    public function searchCompanies(SearchLocationDTO $searchDTO): array;
+    public function searchCompanies(SearchLocationDTO $searchDTO): Collection|array;
 }

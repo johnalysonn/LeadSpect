@@ -240,19 +240,35 @@
             </div>
 
             <!-- Lista de Cards de Resultados (Scroll Interno com Paginação) -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-[#F4F4F5]" @scroll="handleScroll($event)">
-                <template x-for="(company, index) in paginatedCompanies" :key="index">
-                    <div class="p-3.5 rounded-xl border border-[#E4E4E7] bg-white hover:border-zinc-400 transition-all space-y-2.5 shadow-xs">
+            <div id="leads-list-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-[#F4F4F5]" @scroll="handleScroll($event)">
+                <template x-for="(company, index) in paginatedCompanies" :key="getLeadId(company)">
+                    <div :id="'lead-card-' + getLeadId(company)"
+                         @click="selectLeadFromList(company)"
+                         :class="selectedLeadId === getLeadId(company) ? 'border-black ring-2 ring-black/20 bg-zinc-50 shadow-md scale-[1.01]' : 'border-[#E4E4E7] bg-white hover:border-zinc-400 shadow-xs'"
+                         class="p-3.5 rounded-xl border transition-all duration-200 space-y-2.5 cursor-pointer">
                         
-                        <!-- Header do Card -->
+                        <!-- Header do Card com Ícone do Tipo de Lead -->
                         <div class="flex items-start justify-between gap-2">
-                            <div>
-                                <h3 class="font-semibold text-xs text-[#18181B] leading-tight" x-text="company.name"></h3>
-                                <span class="text-[11px] text-[#71717A] mt-0.5 inline-block" x-text="company.category || 'Estabelecimento'"></span>
+                            <div class="flex items-start gap-2.5 min-w-0">
+                                <!-- Ícone do Tipo de Lead -->
+                                <div class="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-white shadow-xs transition-transform hover:scale-105 mt-0.5"
+                                     :style="'background-color: ' + getCategoryConfig(company.category, company.name).bg"
+                                     x-html="getCategoryConfig(company.category, company.name).iconSvg">
+                                </div>
+
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5">
+                                        <h3 class="font-semibold text-xs text-[#18181B] leading-tight truncate" x-text="company.name"></h3>
+                                        <template x-if="selectedLeadId === getLeadId(company)">
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-black text-white shrink-0 animate-pulse">Selecionado</span>
+                                        </template>
+                                    </div>
+                                    <span class="text-[11px] text-[#71717A] mt-0.5 inline-block" x-text="getCategoryConfig(company.category, company.name).label || company.category || 'Estabelecimento'"></span>
+                                </div>
                             </div>
 
-                            <button @click="openWhatsAppModal(company)"
-                                    class="h-7 px-2.5 rounded-lg text-[11px] font-medium bg-black hover:bg-zinc-800 text-white flex items-center gap-1 transition-colors cursor-pointer"
+                            <button @click.stop="openWhatsAppModal(company)"
+                                    class="h-7 px-2.5 rounded-lg text-[11px] font-medium bg-black hover:bg-zinc-800 text-white flex items-center gap-1 transition-colors cursor-pointer shrink-0"
                                     title="Enviar mensagem via WhatsApp">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
@@ -286,9 +302,9 @@
                             <template x-if="company.website">
                                 <div class="flex items-center gap-1.5">
                                     <svg class="w-3.5 h-3.5 text-[#71717A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m-9 9a9 9 0 019-9"/>
                                     </svg>
-                                    <a :href="company.website" target="_blank" class="text-black font-medium hover:underline truncate" x-text="company.website"></a>
+                                    <a :href="company.website" target="_blank" @click.stop class="text-black font-medium hover:underline truncate" x-text="company.website"></a>
                                 </div>
                             </template>
 
@@ -312,7 +328,7 @@
 
                             <span :class="company.has_whatsapp ? 'border-black bg-black text-white font-medium' : 'border-[#E4E4E7] bg-[#F4F4F5] text-[#71717A]'"
                                   class="px-2 py-0.5 rounded-md border flex items-center gap-1">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                                 <span x-text="company.has_whatsapp ? 'WhatsApp' : 'Sem Whats'"></span>
                             </span>
 
@@ -329,12 +345,12 @@
 
                         <!-- Footer do Card -->
                         <div class="pt-2 border-t border-[#E4E4E7] flex items-center justify-between">
-                            <button @click="focusMarker(company)" class="text-[11px] text-[#71717A] hover:text-black font-medium underline flex items-center gap-1">
+                            <button @click.stop="focusMarker(company)" class="text-[11px] text-[#71717A] hover:text-black font-medium underline flex items-center gap-1">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                                 <span>Ver no mapa</span>
                             </button>
                             
-                            <button @click="addLead(company)"
+                            <button @click.stop="addLead(company)"
                                     class="px-2.5 py-1 rounded-lg text-[11px] font-medium border border-[#E4E4E7] bg-white hover:bg-[#F4F4F5] text-[#18181B] flex items-center gap-1 transition-colors cursor-pointer">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -451,6 +467,8 @@
             };
         }
 
+        window.APP_DEBUG = @json(config('app.debug'));
+
         function searchComponent(initialTemplates = []) {
             return {
                 searchQuery: '',
@@ -465,6 +483,10 @@
                 showFilters: false,
                 map: null,
                 markers: [],
+                activePopup: null,
+                activeMarkerElement: null,
+                selectedLeadId: null,
+
                 whatsappModalOpen: false,
                 selectedCompany: null,
                 selectedTemplateId: '',
@@ -480,6 +502,36 @@
                     hasPhone: false,
                     hasInstagram: false,
                     hasFacebook: false,
+                },
+
+                getLeadId(company) {
+                    if (!company) return '';
+                    return company.id || company.osm_id || (company.latitude && company.longitude ? `${company.latitude}_${company.longitude}` : '');
+                },
+
+                scrollToLeadInList(company) {
+                    const leadId = this.getLeadId(company);
+                    if (!leadId) return;
+
+                    this.selectedLeadId = leadId;
+
+                    const indexInFiltered = this.filteredCompanies.findIndex(c => this.getLeadId(c) === leadId);
+                    if (indexInFiltered !== -1 && indexInFiltered >= this.visibleCount) {
+                        this.visibleCount = Math.min(this.filteredCompanies.length, indexInFiltered + 10);
+                    }
+
+                    this.$nextTick(() => {
+                        const cardEl = document.getElementById('lead-card-' + leadId);
+                        if (cardEl) {
+                            cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                    });
+                },
+
+                selectLeadFromList(company) {
+                    const leadId = this.getLeadId(company);
+                    this.selectedLeadId = leadId;
+                    this.focusMarker(company);
                 },
 
                 // Camadas de visualização do mapa
@@ -545,19 +597,8 @@
 
                     this.map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
-                    // Marcar o país (Brasil) no carregamento inicial
-                    const el = document.createElement('div');
-                    el.className = 'custom-brazil-country-marker';
-                    el.style.cssText = 'background:#18181B;color:#FFF;font-weight:600;font-size:11px;padding:4px 10px;border-radius:20px;border:2px solid #FFF;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;gap:4px;cursor:pointer;';
-                    el.innerHTML = `<span>🇧🇷</span><span>Brasil</span>`;
-
-                    const popup = new maplibregl.Popup({ offset: 25 })
-                        .setHTML('<div style="font-family:sans-serif;font-size:12px;padding:2px;"><b>Brasil</b><br><small>Visão Geral do País</small></div>');
-
-                    this.countryMarker = new maplibregl.Marker({ element: el })
-                        .setLngLat([-51.92528, -14.235004])
-                        .setPopup(popup)
-                        .addTo(this.map);
+                    // Desenhar contorno traçado do território brasileiro no carregamento inicial
+                    this.drawBrazilTerritoryOutline();
                 },
 
                 applySearchMask(event) {
@@ -602,6 +643,7 @@
                     this.loading = true;
                     this.validationError = '';
                     this.visibleCount = 15;
+                    this.selectedLeadId = null;
                     try {
                         const payload = {
                             query: this.searchQuery,
@@ -684,61 +726,63 @@
                 },
 
                 renderMapMarkers() {
+                    if (this.activePopup) {
+                        this.activePopup.remove();
+                        this.activePopup = null;
+                    }
+                    if (this.activeMarkerElement) {
+                        this.activeMarkerElement.classList.remove('marker-active');
+                        this.activeMarkerElement = null;
+                    }
+
                     this.markers.forEach(m => m.remove());
                     this.markers = [];
 
                     const visibleCompanies = this.filteredCompanies;
+                    const debugMode = window.APP_DEBUG;
 
                     visibleCompanies.forEach(company => {
-                        if (!company.latitude || !company.longitude) return;
+                        if (!company || !company.latitude || !company.longitude) return;
 
-                        const el = document.createElement('div');
-                        el.className = 'custom-company-marker';
-                        el.style.cssText = 'background-color:#18181B;width:14px;height:14px;border:2px solid #FFF;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);cursor:pointer;';
+                        // Marcador customizado baseado na categoria
+                        const el = window.LeadSpectMapMarkers.createMarkerElement(company);
+                        if (!el) return;
 
-                        const websiteBadge = company.has_website ? '<span style="background:#18181B;color:#FFF;padding:2px 6px;border-radius:4px;font-size:10px;margin-right:4px;">Site</span>' : '<span style="background:#F4F4F5;color:#71717A;padding:2px 6px;border-radius:4px;border:1px solid #E4E4E7;font-size:10px;margin-right:4px;">Sem site</span>';
-                        const whatsappBadge = company.has_whatsapp ? '<span style="background:#18181B;color:#FFF;padding:2px 6px;border-radius:4px;font-size:10px;margin-right:4px;">WhatsApp</span>' : '<span style="background:#F4F4F5;color:#71717A;padding:2px 6px;border-radius:4px;border:1px solid #E4E4E7;font-size:10px;margin-right:4px;">Sem Whats</span>';
-                        const phoneBadge = company.has_phone ? '<span style="background:#18181B;color:#FFF;padding:2px 6px;border-radius:4px;font-size:10px;margin-right:4px;">Fone</span>' : '<span style="background:#F4F4F5;color:#71717A;padding:2px 6px;border-radius:4px;border:1px solid #E4E4E7;font-size:10px;margin-right:4px;">Sem fone</span>';
-                        const instagramBadge = company.has_instagram ? '<span style="background:#F4F4F5;color:#18181B;padding:2px 6px;border-radius:4px;border:1px solid #18181B;font-size:10px;margin-right:4px;">Instagram</span>' : '';
+                        const popupHtml = window.LeadSpectMapMarkers.createPopupHtml(company, debugMode);
 
-                        const popupHtml = `
-                            <div style="color: #18181B; font-family: sans-serif; font-size: 12px; padding: 4px; min-width: 240px; max-width: 280px;">
-                                <div style="margin-bottom: 6px;">
-                                    <strong style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 2px; line-height: 1.2; color: #18181B;">${company.name}</strong>
-                                    <small style="color: #71717A; font-weight: 500;">${company.category || 'Estabelecimento'}</small>
-                                </div>
-                                
-                                <p style="font-size: 11px; color: #71717A; margin: 6px 0; line-height: 1.3;">${company.address || company.city || 'Sem endereço registrado'}</p>
-                                
-                                <div style="margin: 8px 0; display: flex; flex-wrap: wrap; gap: 4px;">
-                                    ${websiteBadge}
-                                    ${whatsappBadge}
-                                    ${phoneBadge}
-                                    ${instagramBadge}
-                                </div>
-                                
-                                <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #E4E4E7; display: flex; justify-content: space-between; gap: 8px;">
-                                    <button onclick="window.searchApp.openWhatsAppModalByOsmId('${company.osm_id}')"
-                                            style="flex: 1; height: 26px; border: none; background: #000; color: #FFF; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                        WhatsApp
-                                    </button>
-                                    <button onclick="window.searchApp.addLeadByOsmId('${company.osm_id}')"
-                                            style="flex: 1; height: 26px; border: 1px solid #E4E4E7; background: #FFF; color: #18181B; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                        + Lead
-                                    </button>
-                                </div>
-                            </div>
-                        `;
+                        const popup = new maplibregl.Popup({ 
+                            offset: [0, -42], 
+                            closeButton: true, 
+                            closeOnClick: false 
+                        }).setHTML(popupHtml);
 
-                        const popup = new maplibregl.Popup({ offset: 15 }).setHTML(popupHtml);
-
-                        const marker = new maplibregl.Marker({ element: el })
+                        const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
                             .setLngLat([company.longitude, company.latitude])
-                            .setPopup(popup)
                             .addTo(this.map);
 
-                        marker.companyOsmId = company.osm_id;
+                        const leadId = this.getLeadId(company);
+                        marker.companyOsmId = leadId;
+                        marker.companyPopup = popup;
+                        marker.companyData = company;
+
                         this.markers.push(marker);
+
+                        el.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.openCompanyPopup(company, marker, popup);
+                        });
+
+                        popup.on('close', () => {
+                            if (el) {
+                                el.classList.remove('marker-active');
+                            }
+                            if (this.activeMarkerElement === el) {
+                                this.activeMarkerElement = null;
+                            }
+                            if (this.activePopup === popup) {
+                                this.activePopup = null;
+                            }
+                        });
                     });
 
                     // Se houver marcadores visíveis, enquadra o mapa para exibir todos os pontos
@@ -753,7 +797,73 @@
                     }
                 },
 
+                openCompanyPopup(company, marker, popup) {
+                    if (!company || !this.map) return;
+
+                    const leadId = this.getLeadId(company);
+                    this.selectedLeadId = leadId;
+
+                    // 1. Fechar o popup ativo anterior se for diferente
+                    if (this.activePopup && this.activePopup !== popup) {
+                        this.activePopup.remove();
+                    }
+
+                    // 2. Remover destaque do elemento de marcador anterior
+                    if (this.activeMarkerElement) {
+                        this.activeMarkerElement.classList.remove('marker-active');
+                    }
+
+                    // 3. Associar as coordenadas e abrir o popup no mapa
+                    if (popup) {
+                        popup.setLngLat([company.longitude, company.latitude]);
+                        if (!popup.isOpen()) {
+                            popup.addTo(this.map);
+                        }
+                    }
+
+                    // 4. Adicionar classe ativa no elemento DOM do marcador
+                    const el = marker ? marker.getElement() : null;
+                    if (el) {
+                        el.classList.add('marker-active');
+                        this.activeMarkerElement = el;
+                    }
+                    this.activePopup = popup;
+
+                    // 5. Centralizar suavemente o mapa no marcador
+                    this.map.flyTo({
+                        center: [company.longitude, company.latitude],
+                        zoom: Math.max(this.map.getZoom(), 16),
+                        duration: 700,
+                        essential: true
+                    });
+
+                    // 6. Rolar a lista lateral até o lead correspondente
+                    this.scrollToLeadInList(company);
+                },
+
+                focusMarker(company) {
+                    if (!company || !company.latitude || !company.longitude) return;
+
+                    const leadId = this.getLeadId(company);
+                    this.selectedLeadId = leadId;
+
+                    const marker = this.markers.find(m => m.companyOsmId === leadId || m.companyOsmId === company.osm_id || m.companyOsmId === company.id);
+
+                    if (marker && marker.companyPopup) {
+                        this.openCompanyPopup(company, marker, marker.companyPopup);
+                    } else {
+                        this.map.flyTo({
+                            center: [company.longitude, company.latitude],
+                            zoom: 16,
+                            duration: 700,
+                            essential: true
+                        });
+                        this.scrollToLeadInList(company);
+                    }
+                },
+
                 get filteredCompanies() {
+                    if (!Array.isArray(this.companies)) return [];
                     return this.companies.filter(c => {
                         if (this.filters.hasWebsite && !c.has_website) return false;
                         if (this.filters.noWebsite && c.has_website) return false;
@@ -779,36 +889,15 @@
                     }
                 },
 
-                focusMarker(company) {
-                    if (company.latitude && company.longitude) {
-                        this.map.flyTo({
-                            center: [company.longitude, company.latitude],
-                            zoom: 17,
-                            essential: true
-                        });
-                        const marker = this.markers.find(m => m.companyOsmId === company.osm_id);
-                        if (marker) {
-                            marker.togglePopup();
-                            const el = marker.getElement();
-                            if (el) {
-                                el.classList.add('marker-focus-bounce');
-                                setTimeout(() => {
-                                    el.classList.remove('marker-focus-bounce');
-                                }, 1200);
-                            }
-                        }
-                    }
-                },
-
                 openWhatsAppModalByOsmId(osmId) {
-                    const company = this.companies.find(c => c.osm_id === osmId);
+                    const company = this.companies.find(c => (c.id === osmId || c.osm_id === osmId || this.getLeadId(c) === osmId));
                     if (company) {
                         this.openWhatsAppModal(company);
                     }
                 },
 
                 addLeadByOsmId(osmId) {
-                    const company = this.companies.find(c => c.osm_id === osmId);
+                    const company = this.companies.find(c => (c.id === osmId || c.osm_id === osmId || this.getLeadId(c) === osmId));
                     if (company) {
                         this.addLead(company);
                     }
@@ -988,6 +1077,60 @@
                     }
                 },
 
+                drawBrazilTerritoryOutline() {
+                    const brazilGeoJson = {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Polygon',
+                            coordinates: [[
+                                [-51.6, 4.4], [-50.0, 1.5], [-48.5, -0.6], [-44.0, -2.4], [-40.0, -2.8],
+                                [-35.5, -5.1], [-34.8, -7.1], [-35.2, -9.0], [-38.5, -13.0], [-39.2, -18.0],
+                                [-40.3, -20.3], [-42.0, -23.0], [-46.3, -24.0], [-48.5, -25.5], [-48.5, -27.6],
+                                [-53.4, -33.7], [-57.1, -29.8], [-53.7, -26.3], [-54.6, -25.5], [-57.8, -19.0],
+                                [-65.3, -10.8], [-72.7, -7.6], [-70.0, -4.2], [-67.1, 1.2], [-60.2, 5.2],
+                                [-56.0, 2.0], [-51.6, 4.4]
+                            ]]
+                        }
+                    };
+
+                    const addLayers = () => {
+                        if (!this.map) return;
+                        if (this.map.getSource('brazil-territory')) {
+                            this.map.getSource('brazil-territory').setData(brazilGeoJson);
+                        } else {
+                            this.map.addSource('brazil-territory', {
+                                type: 'geojson',
+                                data: brazilGeoJson
+                            });
+                            this.map.addLayer({
+                                id: 'brazil-territory-fill',
+                                type: 'fill',
+                                source: 'brazil-territory',
+                                paint: {
+                                    'fill-color': '#18181B',
+                                    'fill-opacity': 0.04
+                                }
+                            });
+                            this.map.addLayer({
+                                id: 'brazil-territory-line',
+                                type: 'line',
+                                source: 'brazil-territory',
+                                paint: {
+                                    'line-color': '#18181B',
+                                    'line-width': 2.2,
+                                    'line-dasharray': [5, 4]
+                                }
+                            });
+                        }
+                    };
+
+                    if (this.map.isStyleLoaded()) {
+                        addLayers();
+                    } else {
+                        this.map.once('load', () => addLayers());
+                    }
+                },
+
                 clearCityBoundary() {
                     if (this.map && this.map.getSource('city-boundary')) {
                         this.map.getSource('city-boundary').setData({
@@ -997,23 +1140,23 @@
                     }
                 },
 
+                getCategoryConfig(catStr, companyName = '') {
+                    if (window.LeadSpectMapMarkers) {
+                        return window.LeadSpectMapMarkers.getCategoryConfig(catStr, companyName);
+                    }
+                    return {
+                        bg: '#18181B',
+                        color: '#FFFFFF',
+                        label: catStr || 'Estabelecimento',
+                        iconSvg: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`
+                    };
+                },
+
                 drawCityMarker(cityName, lat, lng) {
                     if (this.cityMarker) {
                         this.cityMarker.remove();
                         this.cityMarker = null;
                     }
-
-                    const el = document.createElement('div');
-                    el.className = 'custom-city-marker';
-                    el.style.cssText = 'background:#000;color:#FFF;font-weight:600;font-size:11px;padding:4px 10px;border-radius:8px;border:2px solid #FFF;box-shadow:0 2px 10px rgba(0,0,0,0.4);white-space:nowrap;display:flex;align-items:center;gap:5px;cursor:pointer;';
-                    el.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg><span>Cidade: ${cityName}</span>`;
-
-                    const popup = new maplibregl.Popup({ offset: 20 }).setHTML(`<div style="font-family:sans-serif;font-size:12px;padding:2px;"><b>Cidade: ${cityName}</b><br><small>Localização central da área buscada</small></div>`);
-
-                    this.cityMarker = new maplibregl.Marker({ element: el })
-                        .setLngLat([lng, lat])
-                        .setPopup(popup)
-                        .addTo(this.map);
                 },
 
                 fetchAutocomplete(val) {

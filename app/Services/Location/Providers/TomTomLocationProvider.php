@@ -3,8 +3,10 @@
 namespace App\Services\Location\Providers;
 
 use App\Services\Location\Contracts\LocationProviderInterface;
-use App\Services\Location\DTOs\CompanyResultDTO;
+use App\Services\Location\DTOs\PlaceDTO;
 use App\Services\Location\DTOs\SearchLocationDTO;
+use App\Services\Location\Mappers\TomTomResponseMapper;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -90,9 +92,9 @@ class TomTomLocationProvider implements LocationProviderInterface
     /**
      * Search companies around a geographic coordinate using TomTom Search API.
      *
-     * @return array<CompanyResultDTO>
+     * @return Collection<int, PlaceDTO>
      */
-    public function searchCompanies(SearchLocationDTO $searchDTO): array
+    public function searchCompanies(SearchLocationDTO $searchDTO): Collection
     {
         if (empty($this->apiKey)) {
             throw new RuntimeException('TomTom API Key não configurada (TOMTOM_API_KEY)');
@@ -141,70 +143,15 @@ class TomTomLocationProvider implements LocationProviderInterface
             $data = $response->json();
             $results = $data['results'] ?? [];
 
-            $companyDTOs = [];
+            $places = [];
             foreach ($results as $item) {
-                $poi = $item['poi'] ?? [];
-                $address = $item['address'] ?? [];
-                $position = $item['position'] ?? [];
-
-                $name = $poi['name'] ?? null;
-                if (empty($name)) {
-                    continue;
+                $placeDTO = TomTomResponseMapper::map($item, $searchDTO->category);
+                if ($placeDTO !== null) {
+                    $places[] = $placeDTO;
                 }
-
-                $elemLat = $position['lat'] ?? null;
-                $elemLng = $position['lon'] ?? null;
-                if ($elemLat === null || $elemLng === null) {
-                    continue;
-                }
-
-                $phone = $poi['phone'] ?? null;
-                $whatsapp = null;
-                if ($phone) {
-                    $cleanPhone = preg_replace('/\D/', '', $phone);
-                    if (preg_match('/^(?:55)?\d{2}9\d{8}$/', $cleanPhone)) {
-                        $whatsapp = $phone;
-                    }
-                }
-
-                $website = $poi['url'] ?? null;
-
-                // Categoria formatada
-                $categoryName = $searchDTO->category;
-                if (!empty($poi['classifications'][0]['names'][0]['name'])) {
-                    $categoryName = $poi['classifications'][0]['names'][0]['name'];
-                } elseif (!empty($poi['categories'][0])) {
-                    $categoryName = ucfirst(str_replace('_', ' ', $poi['categories'][0]));
-                }
-
-                $street = $address['streetName'] ?? null;
-                $number = $address['streetNumber'] ?? null;
-                $formattedAddress = $street ? ($number ? "{$street}, {$number}" : $street) : ($address['freeformAddress'] ?? null);
-
-                $companyDTOs[] = new CompanyResultDTO(
-                    osmId: 'tomtom_' . ($item['id'] ?? md5($name . $elemLat . $elemLng)),
-                    name: $name,
-                    category: $categoryName ?? 'Estabelecimento',
-                    address: $formattedAddress,
-                    city: $address['municipality'] ?? null,
-                    neighborhood: $address['municipalitySubdivision'] ?? null,
-                    postalCode: $address['postalCode'] ?? null,
-                    latitude: (float) $elemLat,
-                    longitude: (float) $elemLng,
-                    phone: $phone,
-                    whatsapp: $whatsapp,
-                    website: $website,
-                    instagram: null,
-                    facebook: null,
-                    rating: null,
-                    reviewCount: 0,
-                    isOpenNow: null,
-                    openingHours: null,
-                    rawData: $item
-                );
             }
 
-            return $companyDTOs;
+            return collect($places);
         } catch (\Throwable $e) {
             if ($e instanceof RuntimeException) {
                 throw $e;

@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Location\DTOs\CompanyResultDTO;
+use App\Services\Location\DTOs\PlaceDTO;
 use App\Services\Location\DTOs\SearchLocationDTO;
 use App\Services\Location\Providers\TomTomLocationProvider;
 use Illuminate\Support\Facades\Http;
@@ -12,7 +12,7 @@ it('throws exception when tom tom api key is missing', function () {
     $provider->searchCompanies($dto);
 })->throws(\RuntimeException::class, 'TomTom API Key não configurada');
 
-it('searches companies using tom tom api and maps to company result dto', function () {
+it('searches companies using tom tom api and maps to place dto', function () {
     Http::fake([
         'https://api.tomtom.com/*' => Http::response([
             'summary' => ['numResults' => 1],
@@ -33,6 +33,8 @@ it('searches companies using tom tom api and maps to company result dto', functi
                         'municipality' => 'São Paulo',
                         'municipalitySubdivision' => 'Bela Vista',
                         'postalCode' => '01310-100',
+                        'country' => 'Brasil',
+                        'countrySubdivision' => 'SP',
                     ],
                     'position' => [
                         'lat' => -23.5615,
@@ -55,17 +57,20 @@ it('searches companies using tom tom api and maps to company result dto', functi
     $results = $provider->searchCompanies($dto);
 
     expect($results)->toHaveCount(1);
-    expect($results[0])->toBeInstanceOf(CompanyResultDTO::class);
-    expect($results[0]->osmId)->toBe('tomtom_tt_123');
-    expect($results[0]->name)->toBe('Farmácia TomTom');
-    expect($results[0]->category)->toBe('Farmácia');
-    expect($results[0]->address)->toBe('Avenida Paulista, 1000');
-    expect($results[0]->city)->toBe('São Paulo');
-    expect($results[0]->neighborhood)->toBe('Bela Vista');
-    expect($results[0]->postalCode)->toBe('01310-100');
-    expect($results[0]->phone)->toBe('+55 11 98888-7777');
-    expect($results[0]->whatsapp)->toBe('+55 11 98888-7777');
-    expect($results[0]->website)->toBe('https://farmaciatomtom.com.br');
+    expect($results->first())->toBeInstanceOf(PlaceDTO::class);
+    expect($results->first()->id)->toBe('tomtom_tt_123');
+    expect($results->first()->name)->toBe('Farmácia TomTom');
+    expect($results->first()->category)->toBe('pharmacy');
+    expect($results->first()->address)->toBe('Avenida Paulista, 1000');
+    expect($results->first()->city)->toBe('São Paulo');
+    expect($results->first()->state)->toBe('SP');
+    expect($results->first()->country)->toBe('Brasil');
+    expect($results->first()->neighborhood)->toBe('Bela Vista');
+    expect($results->first()->postalCode)->toBe('01310-100');
+    expect($results->first()->phone)->toBe('+55 11 98888-7777');
+    expect($results->first()->whatsapp)->toBe('+55 11 98888-7777');
+    expect($results->first()->website)->toBe('https://farmaciatomtom.com.br');
+    expect($results->first()->provider)->toBe('TomTom');
 });
 
 it('throws runtime exception when tom tom returns http 429 rate limit', function () {
