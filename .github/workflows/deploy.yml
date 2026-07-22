@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install NPM dependencies
@@ -47,6 +47,7 @@ jobs:
           DB_DATABASE: ':memory:'
         run: php artisan test
 
+
   deploy:
     name: Continuous Deployment
     needs: ci
@@ -56,62 +57,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.5'
-
-      - name: Install production dependencies
-        run: |
-          composer install \
-          --no-dev \
-          --no-interaction \
-          --prefer-dist \
-          --optimize-autoloader
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Build assets
         run: |
           npm ci
           npm run build
 
-      - name: Limpar arquivos de desenvolvimento antes do envio
+      - name: Limpar arquivos desnecessários antes do envio
         run: |
           rm -rf node_modules
+          rm -rf vendor
           rm -rf tests
           rm -rf .git
           rm -rf .github
           rm -rf bootstrap/cache/*.php
-          rm -rf storage/*.key
+          rm -rf storage/logs/*
 
-      - name: Compactar projeto em ZIP
-        run: zip -r deploy.zip . -x "*.git*"
-
-      - name: Deploy via SFTP (Arquivo Único)
+      - name: Deploy via SFTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.5
         with:
           server: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USER }}
           password: ${{ secrets.HOSTINGER_PASSWORD }}
           port: ${{ secrets.HOSTINGER_PORT }}
-          local_path: './deploy.zip'
-          remote_path: ${{ secrets.HOSTINGER_PATH }}/deploy.zip
-
-      - name: Descompactar e Otimizar no Servidor Hostinger
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USER }}
-          password: ${{ secrets.HOSTINGER_PASSWORD }}
-          port: ${{ secrets.HOSTINGER_PORT }}
-          script: |
-            cd ${{ secrets.HOSTINGER_PATH }}
-            unzip -o deploy.zip
-            rm deploy.zip
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
+          local_path: './'
+          remote_path: ${{ secrets.HOSTINGER_PATH }}
