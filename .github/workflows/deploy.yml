@@ -34,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Build frontend
-        run: npm run build
+        run: RAYON_NUM_THREADS=1 npm run build
 
       - name: Run Laravel tests
         run: php artisan test
