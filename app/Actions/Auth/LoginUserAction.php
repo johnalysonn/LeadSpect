@@ -19,7 +19,7 @@ class LoginUserAction
     {
         $throttleKey = Str::transliterate(Str::lower($email) . '|' . request()->ip());
 
-        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+        if (RateLimiter::tooManyAttempts($throttleKey, 10)) {
             $seconds = RateLimiter::availableIn($throttleKey);
             throw ValidationException::withMessages([
                 'email' => ["Muitas tentativas de login. Por favor, tente novamente em {$seconds} segundos."],

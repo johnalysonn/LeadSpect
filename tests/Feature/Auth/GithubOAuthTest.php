@@ -14,7 +14,7 @@ it('initiates github oauth redirect when credentials exist', function () {
 
     $response->assertRedirect();
     $this->assertStringContainsString('github.com', $response->headers->get('Location'));
-});
+})->skip('Login com GitHub desativado temporariamente.');
 
 it('authenticates and creates new user via github oauth callback', function () {
     $abstractUser = Mockery::mock(SocialiteUser::class);
@@ -35,7 +35,7 @@ it('authenticates and creates new user via github oauth callback', function () {
         'github_id' => '987654321',
         'auth_provider' => 'github',
     ]);
-});
+})->skip('Login com GitHub desativado temporariamente.');
 
 it('links existing user with matching email when logging in via github oauth', function () {
     $existingUser = User::factory()->create([
@@ -65,7 +65,7 @@ it('links existing user with matching email when logging in via github oauth', f
     ]);
 
     expect(User::where('email', 'existing@example.com')->count())->toBe(1);
-});
+})->skip('Login com GitHub desativado temporariamente.');
 
 it('allows mock login in local environment', function () {
     $response = $this->post('/auth/mock');
@@ -76,4 +76,4 @@ it('allows mock login in local environment', function () {
         'email' => 'dev@leadspect.com',
         'github_id' => 'mock_github_id_12345',
     ]);
-});
+})->skip('Usuário mock desativado temporariamente.');

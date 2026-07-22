@@ -22,25 +22,26 @@ Route::get('/', function () {
 Route::middleware(['guest'])->group(function () {
     Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login'])
-        ->middleware('throttle:6,1')
+        ->middleware('throttle:10,1')
         ->name('login.store');
 
-    Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
-    Route::post('/register', [RegisterController::class, 'register'])
-        ->middleware('throttle:6,1')
-        ->name('register.store');
+    // Desativados temporariamente:
+    // Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
+    // Route::post('/register', [RegisterController::class, 'register'])
+    //     ->middleware('throttle:6,1')
+    //     ->name('register.store');
 
-    Route::get('/auth/github', [GithubAuthController::class, 'redirect'])
-        ->middleware('throttle:10,1')
-        ->name('auth.github');
+    // Route::get('/auth/github', [GithubAuthController::class, 'redirect'])
+    //     ->middleware('throttle:10,1')
+    //     ->name('auth.github');
 
-    Route::get('/auth/github/callback', [GithubAuthController::class, 'callback'])
-        ->middleware('throttle:10,1')
-        ->name('auth.github.callback');
+    // Route::get('/auth/github/callback', [GithubAuthController::class, 'callback'])
+    //     ->middleware('throttle:10,1')
+    //     ->name('auth.github.callback');
 
-    Route::post('/auth/mock', [GithubAuthController::class, 'mockLogin'])
-        ->middleware('throttle:10,1')
-        ->name('auth.mock');
+    // Route::post('/auth/mock', [GithubAuthController::class, 'mockLogin'])
+    //     ->middleware('throttle:10,1')
+    //     ->name('auth.mock');
 });
 
 // Área Autenticada

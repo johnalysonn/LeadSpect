@@ -8,7 +8,7 @@ it('renders the login page successfully for guests', function () {
 
     $response->assertSuccessful();
     $response->assertSee('LeadSpect');
-    $response->assertSee('Continuar com GitHub');
+    $response->assertDontSee('Continuar com GitHub');
 });
 
 it('redirects authenticated users away from the login page', function () {
@@ -55,7 +55,7 @@ it('locks out user after multiple failed login attempts', function () {
         'password' => Hash::make('password123'),
     ]);
 
-    for ($i = 0; $i < 5; $i++) {
+    for ($i = 0; $i < 10; $i++) {
         $this->post('/login', [
             'email' => 'throttled@example.com',
             'password' => 'wrong-password',
@@ -67,7 +67,7 @@ it('locks out user after multiple failed login attempts', function () {
         'password' => 'password123',
     ]);
 
-    $response->assertSessionHasErrors('email');
+    $response->assertStatus(429);
     $this->assertGuest();
 });
 
