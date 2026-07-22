@@ -171,5 +171,8 @@
         }
     </script>
 
+    <!-- Partial Toast Notifications -->
+    @include('partials.toast')
+
 </body>
 </html>

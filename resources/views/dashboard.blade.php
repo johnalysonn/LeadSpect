@@ -274,5 +274,8 @@
 
     </main>
 
+    <!-- Partial Toast Notifications -->
+    @include('partials.toast')
+
 </body>
 </html>

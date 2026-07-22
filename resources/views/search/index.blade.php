@@ -1229,9 +1229,19 @@
                             body: JSON.stringify(company)
                         });
                         const data = await response.json();
-                        alert(data.message || 'Lead adicionado com sucesso!');
+                        if (response.ok) {
+                            if (window.showToast) {
+                                window.showToast(data.message || `Lead "${company.name}" adicionado com sucesso!`, 'success');
+                            }
+                        } else {
+                            if (window.showToast) {
+                                window.showToast('Não foi possível adicionar o lead.', 'error');
+                            }
+                        }
                     } catch (e) {
-                        alert('Erro ao adicionar lead.');
+                        if (window.showToast) {
+                            window.showToast('Erro de conexão ao adicionar lead.', 'error');
+                        }
                     }
                 },
 
@@ -1282,9 +1292,14 @@
                         const data = await response.json();
                         if (data.whatsapp_url) {
                             window.open(data.whatsapp_url, '_blank');
+                            if (window.showToast) {
+                                window.showToast(`WhatsApp aberto para "${this.selectedCompany?.name || 'Lead'}"!`, 'success');
+                            }
                         }
                     } catch (e) {
-                        alert('Erro ao iniciar contato no WhatsApp.');
+                        if (window.showToast) {
+                            window.showToast('Erro ao iniciar contato no WhatsApp.', 'error');
+                        }
                     } finally {
                         this.whatsappModalOpen = false;
                     }
@@ -1292,6 +1307,9 @@
             };
         }
     </script>
+
+    <!-- Partial Toast Notifications -->
+    @include('partials.toast')
 
 </body>
 </html>
