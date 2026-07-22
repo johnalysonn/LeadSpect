@@ -94,6 +94,6 @@ jobs:
           server: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USER }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
+          port: ${{ secrets.HOSTINGER_PORT }}
           local_path: './'
           remote_path: ${{ secrets.HOSTINGER_PATH }}
